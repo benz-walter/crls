@@ -1,6 +1,6 @@
 ingress:
   # The host under which the application should be reachable.
-  host: "example.com"
+  host: ""
 
 general:
   # Custom secrets to pull images from external repositories.
