@@ -1,0 +1,130 @@
+name: workflow.yml
+on: [push]
+
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/crls
+
+permissions:
+  contents: write  # Required to create releases
+  packages: write  # Required if publishing to GitHub Packages
+
+jobs:
+  build-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.image-tag.outputs.image_tag }}
+    steps:
+      - id: image-tag
+        run: echo "image_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.github_token }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build development image
+        uses: docker/build-push-action@v6
+        with:
+          tags: ${{ steps.image-tag.outputs.image_tag }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  lint-and-validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kubeVersion: [
+          '1.23.0', # minimum version we support as defined in Chart.yaml
+          '1.33.0',
+          '1.34.0',
+          '1.35.0'
+        ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup any prerequisites
+        uses: ./.github/composites/prerequisites
+
+      - name: Lint Helm chart against Kubernetes ${{ matrix.kubeVersion }}
+        run: helm lint --kube-version ${{ matrix.kubeVersion }} -f ./helm/values.lint.yaml ./helm
+
+      - name: Install chart dependencies
+        run: helm dependency build ./helm/
+      - name: Render Helm templates
+        run: helm template -f ./helm/values.lint.yaml ./helm/ > /tmp/rendered-template.yaml
+
+      - name: Install kubeconform
+        run: curl -sSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar -xz -C /usr/local/bin
+      - name: Validate rendered templates with kubeconform against Kubernetes ${{ matrix.kubeVersion }}
+        run: kubeconform -kubernetes-version ${{ matrix.kubeVersion }} -strict -summary /tmp/rendered-template.yaml
+
+  package:
+    runs-on: ubuntu-latest
+    needs: lint-and-validate
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup any prerequisites
+        uses: ./.github/composites/prerequisites
+
+      - name: Install chart dependencies
+        run: helm dependency build ./helm/
+      - name: Package Helm chart
+        run: |
+          CHART_VERSION=${{ github.ref_type == 'tag' && github.ref_name || '0.0.0-dev' }}
+          helm package --destination ./dist --version "$CHART_VERSION" ./helm
+
+      - name: Upload packaged chart as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-helm-chart
+          path: ./dist/*.tgz
+          if-no-files-found: error
+
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        if: github.ref_type == 'tag'
+        with:
+          files: |
+            ./dist/*.tgz
+      - name: Login to GHCR
+        if: github.ref_type == 'tag'
+        run: echo "${{ secrets.HELM_CHART_REGISTRY_TOKEN }}" | helm registry login ${{ vars.HELM_CHART_REGISTRY_HOST }} -u ${{ github.actor }} --password-stdin
+      - name: Push chart to GHCR
+        if: github.ref_type == 'tag'
+        run: helm push ./dist/*.tgz oci://${{ vars.HELM_CHART_REGISTRY_HOST }}/${{ vars.HELM_CHART_REGISTRY_PATH }}
+
+
+
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_type == 'tag' }}
+    needs:
+      - lint-and-validate
+    outputs:
+      image_tag: ${{ steps.image-tag.outputs.image_tag }}
+    steps:
+      - id: image-tag
+        run: echo "image_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.github_token }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          tags: ${{ steps.image-tag.outputs.image_tag }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

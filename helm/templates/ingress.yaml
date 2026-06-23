@@ -1,0 +1,19 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: benz-walter-crls
+spec:
+  rules:
+  {{- with .Values.ingress }}
+  - host: {{ .host | quote }}
+    http:
+      paths:
+      - path: "/"
+        pathType: Prefix
+        backend:
+          service:
+            name: benz-walter-crls
+            port:
+              name: http
+    {{- end }}

@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: benz-walter-crls
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: benz-walter-crls
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: benz-walter-crls
+    spec:
+      {{- with .Values.general.imagePullSecrets }}
+      imagePullSecrets:
+        {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: nginx
+          image: "{{ .Values.general.image.name }}:{{ .Values.general.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.general.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+            periodSeconds: 15
+            failureThreshold: 3

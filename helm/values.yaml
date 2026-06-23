@@ -1,0 +1,19 @@
+ingress:
+  # The host under which the application should be reachable.
+  host: "example.com"
+
+general:
+  # Custom secrets to pull images from external repositories.
+  # See: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  imagePullSecrets: []
+
+  image:
+    # Image to use.
+    name: "ghcr.io/benz-walter/crls/crls"
+
+    # Image tag to use, defaults to Chart.AppVersion
+    tag: ""
+
+    # Defines the pull policy of the image.
+    # Can be 'Never', 'IfNotPresent' and 'Always'
+    pullPolicy: Always
