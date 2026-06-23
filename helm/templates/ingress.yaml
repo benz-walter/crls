@@ -4,8 +4,11 @@ kind: Ingress
 metadata:
   name: benz-walter-crls
 spec:
-  rules:
   {{- with .Values.ingress }}
+  {{- if .ingressClassName }}
+  ingressClassName: {{ .ingressClassName }}
+  {{- end }}
+  rules:
   - host: {{ .host | quote }}
     http:
       paths:

@@ -2,6 +2,10 @@ ingress:
   # The host under which the application should be reachable.
   host: ""
 
+  # The ingress class to use.
+  # Will use the default one defined in the cluster of left empty.
+  ingressClassName: ""
+
 general:
   # Custom secrets to pull images from external repositories.
   # See: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
