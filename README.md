@@ -14,10 +14,10 @@ At least `ingress.host` should be adjusted for deployment.
 
 Install via:
 ```bash
-helm install benz-walter-crls --set ingress.host="...." oci://ghcr.io/benz-walter/charts/crls
+helm install benz-walter-crls --set ingress.host="...." oci://ghcr.io/benz-walter/charts/benz-walter-crls
 ```
 
 Upgrade via (reusing previous values):
 ```bash
-helm upgrade benz-walter-crls --reuse-values oci://ghcr.io/benz-walter/charts/crls
+helm upgrade benz-walter-crls --reuse-values oci://ghcr.io/benz-walter/charts/benz-walter-crls
 ```
