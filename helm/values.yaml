@@ -21,3 +21,12 @@ general:
     # Defines the pull policy of the image.
     # Can be 'Never', 'IfNotPresent' and 'Always'
     pullPolicy: Always
+
+
+serviceAccount:
+  # Creates a service account which will be able to maintain the deployment within the namespace.
+  # A secret will be automatically created which contains the CA and token for that account.
+  # You can get the CA and token via:
+  #   kubectl get -n <namespace> secret/benz-walter-crls -o jsonpath="{.data.ca\.crt}" | base64 --decode
+  #   kubectl get -n <namespace> secret/benz-walter-crls -o jsonpath="{.data.token}" | base64 --decode
+  enabled: false

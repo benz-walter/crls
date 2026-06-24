@@ -1,0 +1,6 @@
+ingress:
+  host: certs.benz-walter.de
+  ingressClassName: nginx
+
+serviceAccount:
+  enabled: true

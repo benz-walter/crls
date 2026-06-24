@@ -101,8 +101,6 @@ jobs:
         if: github.ref_type == 'tag'
         run: helm push ./dist/*.tgz oci://${{ vars.HELM_CHART_REGISTRY_HOST }}/${{ vars.HELM_CHART_REGISTRY_PATH }}
 
-
-
   release:
     runs-on: ubuntu-latest
     if: ${{ github.ref_type == 'tag' }}
@@ -128,3 +126,45 @@ jobs:
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.ref_type == 'tag' }}
+    needs:
+      - release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup any prerequisites
+        uses: ./.github/composites/prerequisites
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v5
+
+      - name: Configure Kubernetes Cluster
+        run: |
+          mkdir -p ~/.kube
+          cat <<EOF > ~/.kube/config
+          apiVersion: v1
+          kind: Config
+          clusters:
+          - cluster:
+              certificate-authority-data: ${{ secrets.K8S_CA_CERT }}
+              server: ${{ secrets.K8S_SERVER }}
+            name: github-actions-cluster
+          contexts:
+          - context:
+              cluster: github-actions-cluster
+              user: github-actions-user
+            name: github-actions-context
+          users:
+          - name: github-actions-user
+            user:
+              token: ${{ secrets.K8S_TOKEN }}
+          current-context: github-actions-context
+          EOF
+
+      - name: Deploy
+        # NOTE: Not using the OCI registry, as we would need to log in first... using the same content already present in the filesystem.
+        run: helm upgrade benz-walter-crls -n benz-walter-crls --set general.image.tag="${{ github.ref_name }}" -f values.bw.yaml ./helm
