@@ -5,13 +5,47 @@
     "ingress": {
       "type": "object",
       "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
         "host": {
-          "type": "string",
-          "minLength": 1
+          "type": "string"
         }
       },
-      "required": ["host"]
+      "if": {
+        "properties": { "enabled": { "const": false } },
+        "required": ["enabled"]
+      },
+      "else": {
+        "properties": { "host": { "minLength": 1 } },
+        "required": ["host"]
+      }
+    },
+    "gatewayApi": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "parentRefs": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "if": {
+        "properties": { "enabled": { "const": true } },
+        "required": ["enabled"]
+      },
+      "then": {
+        "properties": {
+          "host": { "minLength": 1 },
+          "parentRefs": { "minItems": 1 }
+        },
+        "required": ["host", "parentRefs"]
+      }
     }
-  },
-  "required": ["ingress"]
+  }
 }

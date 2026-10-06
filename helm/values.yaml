@@ -1,10 +1,26 @@
 ingress:
+  # Set to false to not create an Ingress (e.g. when using the Gateway API instead).
+  enabled: true
+
   # The host under which the application should be reachable.
   host: ""
 
   # The ingress class to use.
   # Will use the default one defined in the cluster of left empty.
   ingressClassName: ""
+
+gatewayApi:
+  # Creates a Gateway API HTTPRoute. Requires the Gateway API CRDs to be installed in the cluster.
+  enabled: false
+
+  # The host under which the application should be reachable.
+  host: ""
+
+  # The Gateway(s) the route attaches to.
+  # See: https://gateway-api.sigs.k8s.io/reference/spec/#parentreference
+  parentRefs: []
+  #  - name: my-gateway
+  #    namespace: gateway-system
 
 general:
   # Custom secrets to pull images from external repositories.
